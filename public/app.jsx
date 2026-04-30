@@ -1,18 +1,72 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 // ── SUPABASE CONFIG ───────────────────────────────────────────────────────────
-// ── PERSISTENT STORAGE (localStorage — works in any browser) ─────────────────
+// Replace the two values below with your actual Supabase project URL and anon key.
+// Find them in: Supabase Dashboard → Project Settings → API
+const SUPABASE_URL  = 'YOUR_SUPABASE_PROJECT_URL';   // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';      // starts with "eyJ..."
+
+// Initialise the Supabase client (loaded via CDN in index.html)
+let _sb = null;
+try {
+  if (typeof supabase !== 'undefined' &&
+      SUPABASE_URL  !== 'YOUR_SUPABASE_PROJECT_URL' &&
+      SUPABASE_ANON !== 'YOUR_SUPABASE_ANON_KEY') {
+    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    console.log('[YoEcho] Supabase connected ✓');
+  } else {
+    console.warn('[YoEcho] Supabase not configured — using localStorage only.');
+  }
+} catch(e) {
+  console.warn('[YoEcho] Supabase init failed, falling back to localStorage:', e);
+}
+
+// ── HYBRID PERSISTENT STORAGE ─────────────────────────────────────────────────
+// Reads:  localStorage first (instant), falls back to Supabase, then caches locally.
+// Writes: localStorage immediately (keeps UI fast), syncs to Supabase in background.
+// Offline: works fully on localStorage alone when Supabase is unreachable.
 const store = {
   async get(key) {
+    // 1. Try localStorage first — fast and works offline
     try {
       const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
-    } catch(e) { return null; }
+      if (raw !== null) return JSON.parse(raw);
+    } catch(e) { /* corrupt entry — fall through to Supabase */ }
+
+    // 2. Fall back to Supabase if configured
+    if (_sb) {
+      try {
+        const { data, error } = await _sb
+          .from('kv_store')
+          .select('value')
+          .eq('key', key)
+          .maybeSingle();
+        if (!error && data) {
+          // Cache in localStorage for next time
+          try { localStorage.setItem(key, JSON.stringify(data.value)); } catch(_) {}
+          return data.value;
+        }
+      } catch(e) { console.warn('[YoEcho] Supabase read error:', e); }
+    }
+
+    return null;
   },
+
   async set(key, value) {
+    // 1. Write to localStorage immediately so the UI never waits
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch(e) { console.warn("storage.set failed:", e); }
+    } catch(e) { console.warn('[YoEcho] localStorage.set failed:', e); }
+
+    // 2. Sync to Supabase in the background — don't await, don't block
+    if (_sb) {
+      _sb.from('kv_store')
+        .upsert({ key, value }, { onConflict: 'key' })
+        .then(({ error }) => {
+          if (error) console.warn('[YoEcho] Supabase sync failed for key:', key, error);
+        })
+        .catch(e => console.warn('[YoEcho] Supabase sync error:', e));
+    }
   },
 };
 
