@@ -3,8 +3,8 @@ const { useState, useEffect, useRef, useCallback } = React;
 // ── SUPABASE CONFIG ───────────────────────────────────────────────────────────
 // Replace the two values below with your actual Supabase project URL and anon key.
 // Find them in: Supabase Dashboard → Project Settings → API
-const SUPABASE_URL  = 'YOUR_SUPABASE_PROJECT_URL';   // e.g. https://xxxx.supabase.co
-const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';      // starts with "eyJ..."
+const SUPABASE_URL  = 'https://huhtfuquftqwuzdxthqi.supabase.co';   // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1aHRmdXF1ZnRxd3V6ZHh0aHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODIzMzMsImV4cCI6MjA5Mjg1ODMzM30.Abf8bNXdOgPzQWPVBqYRVgN0AkSxhOHWGAWRpdCPQW4';      // starts with "eyJ..."
 
 // Initialise the Supabase client (loaded via CDN in index.html)const { useState, useEffect, useRef, useCallback } = React;
 
